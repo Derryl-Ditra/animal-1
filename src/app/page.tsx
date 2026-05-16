@@ -137,18 +137,18 @@ export default function AnimalExplorer() {
             }
           }}
         >
-          <div className="relative w-full h-[85vh] flex items-center justify-center">
+          <div className="relative w-full h-[90vh] flex items-center justify-center p-4">
             <motion.img
               src={currentAnimal.image}
               alt={currentAnimal.key}
               className="max-w-full max-h-full object-contain pointer-events-none"
-              animate={{ scale: isPulsing ? 1.08 : 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 12 }}
+              animate={{ scale: isPulsing ? 1.05 : 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
             />
           </div>
           
-          <div className="absolute bottom-6 pointer-events-none">
-            <h1 className="text-[12px] md:text-[14px] font-medium text-white/40 tracking-[0.2em] uppercase">
+          <div className="absolute bottom-4 pointer-events-none">
+            <h1 className="text-[10px] font-medium text-white/20 tracking-[0.3em] uppercase">
               {t[currentAnimal.key as keyof typeof t]}
             </h1>
           </div>

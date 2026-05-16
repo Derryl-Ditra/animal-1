@@ -70,6 +70,27 @@ export default function AnimalExplorer() {
   }, [isBusy]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isBusy) return;
+      
+      switch (e.key) {
+        case "ArrowLeft": navigate(-1); break;
+        case "ArrowRight": navigate(1); break;
+        case "ArrowUp": setLang("id"); break;
+        case "ArrowDown": setLang("en"); break;
+        case "Enter": 
+        case " ": // Spacebar support as well
+          handleInteraction(); 
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isBusy, navigate, handleInteraction]);
+
+  // Unified load/sync effect
+  useEffect(() => {
     // Pre-warm speech synthesis engine
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.getVoices();
@@ -86,7 +107,8 @@ export default function AnimalExplorer() {
 
   return (
     <main 
-      className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center font-sans selection:bg-transparent touch-none"
+      className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center font-sans selection:bg-transparent touch-none focus:outline-none"
+      tabIndex={0} // Ensure the main container can receive focus for keyboard events
       onClick={() => {
         if (isFirstLoad.current) {
           triggerSound(currentAnimal.key);

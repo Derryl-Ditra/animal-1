@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
+import { TRANSLATIONS, ANIMALS } from "./data";
 
 type Lang = "id" | "en";
 
@@ -13,7 +13,6 @@ export default function AnimalExplorer() {
   const [isBusy, setIsBusy] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isFirstLoad = useRef(true);
 
   const currentAnimal = ANIMALS[currentIndex];

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
+import { TRANSLATIONS, ANIMALS } from "./data";
 
 type Lang = "id" | "en";
 
@@ -12,75 +12,83 @@ export default function AnimalExplorer() {
   const [lang, setLang] = useState<Lang>("id");
   const [isBusy, setIsBusy] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   
-  const isFirstLoad = useRef(true);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
 
-  const triggerSound = useCallback((animalKey: string) => {
-    // Stop any existing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    
+  // Robust Speech Synthesis with Warm Voice Selection
+  const triggerNarration = useCallback((animalKey: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
     setIsBusy(true);
+    window.speechSynthesis.cancel();
+
+    const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
+    const utterance = new SpeechSynthesisUtterance(text);
     
-    const unlock = () => {
+    // Find best "Warm/Female/Google" voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => 
+      v.lang.startsWith(lang) && 
+      (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Soft"))
+    ) || voices.find(v => v.lang.startsWith(lang));
+
+    if (preferredVoice) utterance.voice = preferredVoice;
+    
+    utterance.rate = 0.75; // Slower for toddler phonetic learning
+    utterance.pitch = 1.05; // Slightly warmer
+    
+    utterance.onend = () => {
       setIsBusy(false);
       setIsPulsing(false);
     };
 
-    // 1.2s interaction freeze
-    setTimeout(unlock, 1200);
+    // Safety timeout in case onend fails
+    setTimeout(() => {
+      setIsBusy(false);
+      setIsPulsing(false);
+    }, 1200);
 
-    // Get correct filename
-    const text = t[animalKey as keyof typeof t];
-    const filename = lang === 'id' ? text.toLowerCase().replace(/\s+/g, '_') : animalKey.toLowerCase();
-    
-    // 1. Try static narrator files (Consistent across devices)
-    const voiceUrl = `${BASE_PATH}/voices/${lang}/${filename}.mp3`;
-    const audio = new Audio(voiceUrl);
-    audioRef.current = audio;
-    audio.playbackRate = 0.75; // Slower for toddlers
-
-    audio.play().catch(() => {
-      // 2. Fallback to System Speech Synthesis
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => v.lang.startsWith(lang) && (v.name.includes("Female") || v.name.includes("Google"))) || voices.find(v => v.lang.startsWith(lang));
-        if (preferredVoice) utterance.voice = preferredVoice;
-        utterance.rate = 0.75;
-        utterance.pitch = 1.05;
-        window.speechSynthesis.speak(utterance);
-      }
-    });
-  }, [lang, t]);
+    window.speechSynthesis.speak(utterance);
+  }, [lang]);
 
   const navigate = useCallback((newDir: number) => {
-    if (isBusy) return;
+    if (isBusy || !hasStarted) return;
     
     const whoosh = new Audio("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
-    whoosh.volume = 0.2;
+    whoosh.volume = 0.1;
     whoosh.play().catch(() => {});
 
     setDirection(newDir);
     setCurrentIndex((prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length);
-  }, [isBusy]);
+  }, [isBusy, hasStarted]);
 
   const handleInteraction = useCallback(() => {
+    if (!hasStarted) {
+      setHasStarted(true);
+      return;
+    }
     if (!isBusy) {
       setIsPulsing(true);
-      triggerSound(currentAnimal.key);
+      triggerNarration(currentAnimal.key);
     }
-  }, [isBusy, currentAnimal.key, triggerSound]);
+  }, [hasStarted, isBusy, currentAnimal.key, triggerNarration]);
 
+  // Handle first sound trigger after start
+  useEffect(() => {
+    if (hasStarted) {
+      triggerNarration(currentAnimal.key);
+    }
+  }, [hasStarted, currentIndex, lang, triggerNarration, currentAnimal.key]);
+
+  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!hasStarted) {
+        if (e.key === "Enter" || e.key === " ") setHasStarted(true);
+        return;
+      }
       if (isBusy) return;
       
       switch (e.key) {
@@ -89,7 +97,7 @@ export default function AnimalExplorer() {
         case "ArrowUp": setLang("id"); break;
         case "ArrowDown": setLang("en"); break;
         case "Enter": 
-        case " ": // Spacebar support as well
+        case " ":
           handleInteraction(); 
           break;
       }
@@ -97,42 +105,51 @@ export default function AnimalExplorer() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isBusy, navigate, handleInteraction]);
+  }, [hasStarted, isBusy, navigate, handleInteraction]);
 
-  // Unified load/sync effect
+  // Pre-warm engine
   useEffect(() => {
-    // Pre-warm speech synthesis engine
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.getVoices();
     }
-    
-    const delay = isFirstLoad.current ? 200 : 0;
-    const timer = setTimeout(() => {
-      triggerSound(currentAnimal.key);
-      isFirstLoad.current = false;
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [currentIndex, lang, triggerSound, currentAnimal.key]);
+  }, []);
 
   return (
     <main 
       className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center font-sans selection:bg-transparent touch-none focus:outline-none"
-      tabIndex={0} // Ensure the main container can receive focus for keyboard events
-      onClick={() => {
-        if (isFirstLoad.current) {
-          triggerSound(currentAnimal.key);
-          isFirstLoad.current = false;
-        }
-      }}
+      tabIndex={0}
+      onClick={handleInteraction}
     >
+      
+      {/* Start Overlay (Audio Unlock) */}
+      <AnimatePresence>
+        {!hasStarted && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center cursor-pointer"
+          >
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="w-24 h-24 rounded-full border-2 border-white/20 flex items-center justify-center"
+            >
+              <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white/60 border-b-[15px] border-b-transparent ml-2" />
+            </motion.div>
+            <p className="mt-6 text-white/40 text-[10px] tracking-[0.3em] uppercase">Tap to Start</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Language Toggle */}
       <div className="absolute top-4 right-4 z-50 flex gap-2">
         {(["id", "en"] as Lang[]).map((l) => (
           <button 
             key={l}
             onClick={(e) => {
               e.stopPropagation();
-              if (!isBusy) setLang(l);
+              setLang(l);
             }}
             className={`px-3 py-1 rounded-full text-[10px] uppercase border border-white/10 transition-all ${lang === l ? "bg-white/20 border-white/40 font-bold" : "text-white/20"}`}
           >
@@ -141,14 +158,15 @@ export default function AnimalExplorer() {
         ))}
       </div>
 
+      {/* Navigation Arrows */}
       <button 
-        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy || !hasStarted ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => { e.stopPropagation(); navigate(-1); }}
       >
         &larr;
       </button>
       <button 
-        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy || !hasStarted ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => { e.stopPropagation(); navigate(1); }}
       >
         &rarr;
@@ -167,7 +185,7 @@ export default function AnimalExplorer() {
           animate="center"
           exit="exit"
           transition={{ x: { type: "spring", stiffness: 300, damping: 35 }, opacity: { duration: 0.2 } }}
-          drag={isBusy ? false : "x"}
+          drag={isBusy || !hasStarted ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(_, { offset }) => {
             if (!isBusy) {
@@ -176,7 +194,6 @@ export default function AnimalExplorer() {
             }
           }}
           className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
-          onClick={handleInteraction}
         >
           <div className="relative w-full h-[90vh] flex items-center justify-center p-4">
             <motion.img

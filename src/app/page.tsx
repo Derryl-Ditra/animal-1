@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSLATIONS, ANIMALS } from "./data";
+import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
 
 type Lang = "id" | "en";
 
@@ -36,8 +36,12 @@ export default function AnimalExplorer() {
     // 1.2s interaction freeze
     setTimeout(unlock, 1200);
 
+    // Get correct filename
+    const text = t[animalKey as keyof typeof t];
+    const filename = lang === 'id' ? text.toLowerCase().replace(/\s+/g, '_') : animalKey.toLowerCase();
+    
     // 1. Try static narrator files (Consistent across devices)
-    const voiceUrl = `${BASE_PATH}/voices/${lang}/${animalKey.toLowerCase()}.mp3`;
+    const voiceUrl = `${BASE_PATH}/voices/${lang}/${filename}.mp3`;
     const audio = new Audio(voiceUrl);
     audioRef.current = audio;
     audio.playbackRate = 0.75; // Slower for toddlers
@@ -46,7 +50,6 @@ export default function AnimalExplorer() {
       // 2. Fallback to System Speech Synthesis
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
-        const text = t[animalKey as keyof typeof t];
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v => v.lang.startsWith(lang) && (v.name.includes("Female") || v.name.includes("Google"))) || voices.find(v => v.lang.startsWith(lang));

@@ -1,0 +1,17 @@
+{
+  "name": "Animal Looks Explorer",
+  "short_name": "Animal Looks",
+  "description": "A toddler-friendly animal explorer.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "animals/lion.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

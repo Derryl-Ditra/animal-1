@@ -72,6 +72,13 @@ export default function AnimalExplorer() {
     setCurrentIndex((prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length);
   }, [isBusy]);
 
+  const handleInteraction = useCallback(() => {
+    if (!isBusy) {
+      setIsPulsing(true);
+      triggerSound(currentAnimal.key);
+    }
+  }, [isBusy, currentAnimal.key, triggerSound]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isBusy) return;
@@ -169,12 +176,7 @@ export default function AnimalExplorer() {
             }
           }}
           className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
-          onClick={() => {
-            if (!isBusy) {
-              setIsPulsing(true);
-              triggerSound(currentAnimal.key);
-            }
-          }}
+          onClick={handleInteraction}
         >
           <div className="relative w-full h-[90vh] flex items-center justify-center p-4">
             <motion.img

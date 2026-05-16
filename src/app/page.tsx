@@ -15,10 +15,17 @@ export default function AnimalExplorer() {
   
   const isFirstLoad = useRef(true);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
 
   const triggerSound = useCallback((animalKey: string) => {
+    // Stop any existing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    
     setIsBusy(true);
     
     const unlock = () => {
@@ -29,26 +36,26 @@ export default function AnimalExplorer() {
     // 1.2s interaction freeze
     setTimeout(unlock, 1200);
 
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      
-      const text = t[animalKey as keyof typeof t];
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // High-quality voice selection (Warm & Clear)
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => 
-        v.lang.startsWith(lang) && 
-        (v.name.includes("Female") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Soft"))
-      ) || voices.find(v => v.lang.startsWith(lang));
+    // 1. Try static narrator files (Consistent across devices)
+    const voiceUrl = `${BASE_PATH}/voices/${lang}/${animalKey.toLowerCase()}.mp3`;
+    const audio = new Audio(voiceUrl);
+    audioRef.current = audio;
+    audio.playbackRate = 0.75; // Slower for toddlers
 
-      if (preferredVoice) utterance.voice = preferredVoice;
-      utterance.rate = 0.75; // Slower for phonetic learning
-      utterance.pitch = 1.05; // Warmer tone
-      utterance.volume = 1.0;
-
-      window.speechSynthesis.speak(utterance);
-    }
+    audio.play().catch(() => {
+      // 2. Fallback to System Speech Synthesis
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const text = t[animalKey as keyof typeof t];
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => v.lang.startsWith(lang) && (v.name.includes("Female") || v.name.includes("Google"))) || voices.find(v => v.lang.startsWith(lang));
+        if (preferredVoice) utterance.voice = preferredVoice;
+        utterance.rate = 0.75;
+        utterance.pitch = 1.05;
+        window.speechSynthesis.speak(utterance);
+      }
+    });
   }, [lang, t]);
 
   const navigate = useCallback((newDir: number) => {

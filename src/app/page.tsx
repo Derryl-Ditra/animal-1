@@ -13,32 +13,34 @@ export default function AnimalExplorer() {
   const [isBusy, setIsBusy] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isFirstLoad = useRef(true);
 
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
 
-  const playSound = (url: string) => {
-    const audio = new Audio(url);
-    audio.volume = 0.4;
-    audio.play().catch(() => {});
-  };
+  // Optimized sound trigger with automatic cleanup
+  const triggerSound = useCallback((animalKey: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
 
-  const speak = useCallback((animalKey: string) => {
     setIsBusy(true);
     const voiceUrl = `${BASE_PATH}/voices/${lang}/${animalKey.toLowerCase()}.mp3`;
     const audio = new Audio(voiceUrl);
-    
-    // Fixed 1.2s freeze logic
+    audioRef.current = audio;
+
     const unlock = () => {
       setIsBusy(false);
       setIsPulsing(false);
     };
 
-    // Trigger unlock after 1.2s regardless of audio length (as requested)
+    // Rule: Freeze for 1.2s to prevent doom-scrolling
     setTimeout(unlock, 1200);
 
     audio.play().catch(() => {
+      // Fallback: Speech Synthesis
       if (typeof window !== "undefined" && window.speechSynthesis) {
         const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
         const utterance = new SpeechSynthesisUtterance(text);
@@ -50,89 +52,101 @@ export default function AnimalExplorer() {
     });
   }, [lang]);
 
+  // Clean navigation logic
   const navigate = useCallback((newDir: number) => {
     if (isBusy) return;
-    playSound("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
+    
+    // Instant whoosh sound
+    const whoosh = new Audio("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
+    whoosh.volume = 0.2;
+    whoosh.play().catch(() => {});
+
     setDirection(newDir);
     setCurrentIndex((prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length);
   }, [isBusy]);
 
+  // Unified load/sync effect
   useEffect(() => {
-    // First slide: 200ms delay. New slides: Immediate.
     const delay = isFirstLoad.current ? 200 : 0;
     const timer = setTimeout(() => {
-      speak(currentAnimal.key);
+      triggerSound(currentAnimal.key);
       isFirstLoad.current = false;
     }, delay);
-    return () => clearTimeout(timer);
-  }, [currentIndex, lang, speak, currentAnimal.key]);
 
-  const handleInteraction = () => {
-    if (isBusy) return;
-    setIsPulsing(true);
-    speak(currentAnimal.key);
-  };
+    return () => clearTimeout(timer);
+  }, [currentIndex, lang, triggerSound, currentAnimal.key]);
 
   return (
-    <main className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center">
-      <div className="app-bg" />
-
-      {/* Language Switcher - No dimming */}
-      <div className="absolute top-6 right-6 z-50 flex gap-2">
-        {["id", "en"].map((l) => (
+    <main className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center font-sans selection:bg-transparent">
+      
+      {/* Language Toggle */}
+      <div className="absolute top-8 right-8 z-50 flex gap-3">
+        {(["id", "en"] as Lang[]).map((l) => (
           <button 
             key={l}
-            onClick={() => !isBusy && setLang(l as Lang)}
-            className={`language-btn text-xs md:text-sm uppercase ${lang === l ? "active" : ""}`}
+            onClick={() => !isBusy && setLang(l)}
+            className={`language-btn text-sm uppercase ${lang === l ? "active" : "text-white/40"}`}
           >
             {l}
           </button>
         ))}
       </div>
 
-      {/* Navigation - No dimming, just functional lock */}
-      <div className={`absolute inset-y-0 left-0 w-24 z-10 flex items-center justify-center ${isBusy ? "pointer-events-none" : "cursor-pointer"}`} onClick={() => navigate(-1)}>
-        <div className="text-white/20 text-3xl">&larr;</div>
-      </div>
-      <div className={`absolute inset-y-0 right-0 w-24 z-10 flex items-center justify-center ${isBusy ? "pointer-events-none" : "cursor-pointer"}`} onClick={() => navigate(1)}>
-        <div className="text-white/20 text-3xl">&rarr;</div>
-      </div>
+      {/* Navigation Arrows */}
+      <button 
+        className={`absolute left-0 inset-y-0 w-32 z-10 flex items-center justify-center text-white/10 text-4xl transition-colors hover:text-white/40 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        onClick={() => navigate(-1)}
+      >
+        &larr;
+      </button>
+      <button 
+        className={`absolute right-0 inset-y-0 w-32 z-10 flex items-center justify-center text-white/10 text-4xl transition-colors hover:text-white/40 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        onClick={() => navigate(1)}
+      >
+        &rarr;
+      </button>
 
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentAnimal.id}
           custom={direction}
           variants={{
-            enter: (d: number) => ({ x: d > 0 ? 1000 : -1000, opacity: 0 }),
+            enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%", opacity: 0 }),
             center: { x: 0, opacity: 1 },
-            exit: (d: number) => ({ x: d < 0 ? 1000 : -1000, opacity: 0 }),
+            exit: (d: number) => ({ x: d < 0 ? "100%" : "-100%", opacity: 0 }),
           }}
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+          transition={{ x: { type: "spring", stiffness: 300, damping: 35 }, opacity: { duration: 0.2 } }}
           drag={isBusy ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(_, { offset }) => {
             if (!isBusy) {
-              if (offset.x < -50) navigate(1);
-              else if (offset.x > 50) navigate(-1);
+              if (offset.x < -60) navigate(1);
+              else if (offset.x > 60) navigate(-1);
             }
           }}
-          className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
-          onClick={handleInteraction}
+          className="absolute inset-0 flex flex-col items-center justify-center text-center p-8"
+          onClick={() => {
+            if (!isBusy) {
+              setIsPulsing(true);
+              triggerSound(currentAnimal.key);
+            }
+          }}
         >
-          <div className="relative w-[90vw] h-[80vh] flex items-center justify-center">
+          <div className="relative w-full h-[70vh] flex items-center justify-center">
             <motion.img
               src={currentAnimal.image}
               alt={currentAnimal.key}
-              className="max-w-full max-h-full object-contain"
-              animate={{ scale: isPulsing ? 1.1 : 1 }}
+              className="max-w-full max-h-full object-contain pointer-events-none"
+              animate={{ scale: isPulsing ? 1.08 : 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 12 }}
             />
           </div>
           
-          <div className="absolute bottom-[8vh] pointer-events-none">
-            <h1 className="text-2xl md:text-4xl font-black text-white/80 uppercase italic">
+          <div className="mt-8 pointer-events-none">
+            <h1 className="text-4xl md:text-6xl font-black text-white/90 tracking-tighter uppercase italic">
               {t[currentAnimal.key as keyof typeof t]}
             </h1>
           </div>

@@ -20,34 +20,37 @@ export default function AnimalExplorer() {
   const t = TRANSLATIONS[lang];
 
   const triggerSound = useCallback((animalKey: string) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-
     setIsBusy(true);
-    const voiceUrl = `${BASE_PATH}/voices/${lang}/${animalKey.toLowerCase()}.mp3`;
-    const audio = new Audio(voiceUrl);
-    audioRef.current = audio;
-
+    
     const unlock = () => {
       setIsBusy(false);
       setIsPulsing(false);
     };
 
+    // 1.2s interaction freeze
     setTimeout(unlock, 1200);
 
-    audio.play().catch(() => {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang === "id" ? "id-ID" : "en-US";
-        utterance.rate = 0.75;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-      }
-    });
-  }, [lang]);
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      
+      const text = t[animalKey as keyof typeof t];
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // High-quality voice selection (Warm & Clear)
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        v.lang.startsWith(lang) && 
+        (v.name.includes("Female") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Soft"))
+      ) || voices.find(v => v.lang.startsWith(lang));
+
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.rate = 0.75; // Slower for phonetic learning
+      utterance.pitch = 1.05; // Warmer tone
+      utterance.volume = 1.0;
+
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [lang, t]);
 
   const navigate = useCallback((newDir: number) => {
     if (isBusy) return;
@@ -61,6 +64,11 @@ export default function AnimalExplorer() {
   }, [isBusy]);
 
   useEffect(() => {
+    // Pre-warm speech synthesis engine
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+    }
+    
     const delay = isFirstLoad.current ? 200 : 0;
     const timer = setTimeout(() => {
       triggerSound(currentAnimal.key);

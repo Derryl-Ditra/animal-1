@@ -1,104 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// --- Translations ---
-const TRANSLATIONS = {
-  id: {
-    Lion: "Singa",
-    Tiger: "Harimau",
-    Elephant: "Gajah",
-    Giraffe: "Jerapah",
-    Zebra: "Zebra",
-    Panda: "Panda",
-    Penguin: "Penguin",
-    Koala: "Koala",
-    Kangaroo: "Kanguru",
-    Monkey: "Monyet",
-    Bunny: "Kelinci",
-    Pigeon: "Burung Merpati",
-    Goose: "Angsa",
-    Duck: "Bebek",
-    Cat: "Kucing",
-    Dog: "Anjing",
-    Squirrel: "Tupai",
-    Horse: "Kuda",
-    Cow: "Sapi",
-    Sheep: "Domba",
-    Turtle: "Kura-kura",
-    Fish: "Ikan",
-    Sparrow: "Burung Gereja",
-    Owl: "Burung Hantu",
-    Frog: "Katak",
-    Butterfly: "Kupu-kupu",
-    Bee: "Lebah",
-    Fox: "Rubah",
-    Deer: "Rusa",
-  },
-  en: {
-    Lion: "Lion",
-    Tiger: "Tiger",
-    Elephant: "Elephant",
-    Giraffe: "Giraffe",
-    Zebra: "Zebra",
-    Panda: "Panda",
-    Penguin: "Penguin",
-    Koala: "Koala",
-    Kangaroo: "Kangaroo",
-    Monkey: "Monkey",
-    Bunny: "Bunny",
-    Pigeon: "Pigeon",
-    Goose: "Goose",
-    Duck: "Duck",
-    Cat: "Cat",
-    Dog: "Dog",
-    Squirrel: "Squirrel",
-    Horse: "Horse",
-    Cow: "Cow",
-    Sheep: "Sheep",
-    Turtle: "Turtle",
-    Fish: "Fish",
-    Sparrow: "Sparrow",
-    Owl: "Owl",
-    Frog: "Frog",
-    Butterfly: "Butterfly",
-    Bee: "Bee",
-    Fox: "Fox",
-    Deer: "Deer",
-  },
-};
-
-// --- Data Structure ---
-const BASE_PATH = process.env.NODE_ENV === 'production' ? '/animal-1' : '';
-
-const ANIMALS = [
-  { id: "lion", key: "Lion", image: `${BASE_PATH}/animals/lion.png` },
-  { id: "tiger", key: "Tiger", image: `${BASE_PATH}/animals/tiger.png` },
-  { id: "elephant", key: "Elephant", image: `${BASE_PATH}/animals/elephant.png` },
-  { id: "giraffe", key: "Giraffe", image: `${BASE_PATH}/animals/giraffe.png` },
-  { id: "zebra", key: "Zebra", image: `${BASE_PATH}/animals/zebra.png` },
-  { id: "panda", key: "Panda", image: `${BASE_PATH}/animals/panda.png` },
-  { id: "bunny", key: "Bunny", image: `${BASE_PATH}/animals/bunny.png` },
-  { id: "pigeon", key: "Pigeon", image: `${BASE_PATH}/animals/pigeon.png` },
-  { id: "goose", key: "Goose", image: `${BASE_PATH}/animals/goose.png` },
-  { id: "duck", key: "Duck", image: `${BASE_PATH}/animals/duck.png` },
-  { id: "cat", key: "Cat", image: `${BASE_PATH}/animals/cat.png` },
-  { id: "dog", key: "Dog", image: `${BASE_PATH}/animals/dog.png` },
-  { id: "squirrel", key: "Squirrel", image: `${BASE_PATH}/animals/squirrel.png` },
-  { id: "horse", key: "Horse", image: `${BASE_PATH}/animals/horse.png` },
-  { id: "cow", key: "Cow", image: `${BASE_PATH}/animals/cow.png` },
-  { id: "sheep", key: "Sheep", image: `${BASE_PATH}/animals/sheep.png` },
-  { id: "turtle", key: "Turtle", image: `${BASE_PATH}/animals/turtle.png` },
-  { id: "fish", key: "Fish", image: `${BASE_PATH}/animals/fish.png` },
-  { id: "sparrow", key: "Sparrow", image: `${BASE_PATH}/animals/sparrow.png` },
-  { id: "owl", key: "Owl", image: `${BASE_PATH}/animals/owl.png` },
-  { id: "frog", key: "Frog", image: `${BASE_PATH}/animals/frog.png` },
-  { id: "butterfly", key: "Butterfly", image: `${BASE_PATH}/animals/butterfly.png` },
-  { id: "bee", key: "Bee", image: `${BASE_PATH}/animals/bee.png` },
-  { id: "fox", key: "Fox", image: `${BASE_PATH}/animals/fox.png` },
-  { id: "deer", key: "Deer", image: `${BASE_PATH}/animals/deer.png` },
-];
+import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
 
 type Lang = "id" | "en";
 
@@ -106,196 +10,134 @@ export default function AnimalExplorer() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [lang, setLang] = useState<Lang>("id");
+  const [isBusy, setIsBusy] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
+  
+  const isFirstLoad = useRef(true);
 
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
 
-  // Sound effects
-  const playSound = useCallback((url: string) => {
+  const playSound = (url: string) => {
     const audio = new Audio(url);
     audio.volume = 0.4;
-    audio.play().catch(() => {}); // Ignore autoplay blocks
-  }, []);
+    audio.play().catch(() => {});
+  };
 
-  const navigate = useCallback((newDirection: number) => {
-    playSound("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
-    setDirection(newDirection);
-    setCurrentIndex((prev) => {
-      if (newDirection === 1) {
-        return (prev + 1) % ANIMALS.length;
-      } else {
-        return (prev - 1 + ANIMALS.length) % ANIMALS.length;
-      }
-    });
-  }, [playSound]);
-
-  // Speech function with "Warm Female Voice" optimization
   const speak = useCallback((animalKey: string) => {
+    setIsBusy(true);
     const voiceUrl = `${BASE_PATH}/voices/${lang}/${animalKey.toLowerCase()}.mp3`;
     const audio = new Audio(voiceUrl);
-    audio.volume = 1.0;
     
+    // Fixed 1.2s freeze logic
+    const unlock = () => {
+      setIsBusy(false);
+      setIsPulsing(false);
+    };
+
+    // Trigger unlock after 1.2s regardless of audio length (as requested)
+    setTimeout(unlock, 1200);
+
     audio.play().catch(() => {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
         const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Find a warm/female voice
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => 
-          (v.name.includes("Female") || v.name.includes("Soft") || v.name.includes("Google")) && 
-          v.lang.startsWith(lang)
-        ) || voices.find(v => v.lang.startsWith(lang));
-
-        if (preferredVoice) utterance.voice = preferredVoice;
+        utterance.lang = lang === "id" ? "id-ID" : "en-US";
         utterance.rate = 0.75;
-        utterance.pitch = 1.1; // Slightly higher for "warmth"
-        
-        window.speechSynthesis.cancel(); // Clear queue
+        window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
       }
     });
   }, [lang]);
 
+  const navigate = useCallback((newDir: number) => {
+    if (isBusy) return;
+    playSound("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
+    setDirection(newDir);
+    setCurrentIndex((prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length);
+  }, [isBusy]);
+
   useEffect(() => {
-    // Pre-warm synthesis
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.getVoices();
-    }
-    
-    speak(currentAnimal.key);
-    
-    // Preload next image and next voice
-    const nextIndex = (currentIndex + 1) % ANIMALS.length;
-    const nextKey = ANIMALS[nextIndex].key;
-    
-    // Image preload
-    const img = new Image();
-    img.src = ANIMALS[nextIndex].image;
-    
-    // Voice preload
-    const audio = new Audio(`${BASE_PATH}/voices/${lang}/${nextKey.toLowerCase()}.mp3`);
-    audio.load();
-  }, [currentIndex, lang, currentAnimal.key, speak]);
+    // First slide: 200ms delay. New slides: Immediate.
+    const delay = isFirstLoad.current ? 200 : 0;
+    const timer = setTimeout(() => {
+      speak(currentAnimal.key);
+      isFirstLoad.current = false;
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [currentIndex, lang, speak, currentAnimal.key]);
 
   const handleInteraction = () => {
-    playSound("https://www.soundjay.com/button/sounds/button-30.mp3");
-    speak(currentAnimal.key);
+    if (isBusy) return;
     setIsPulsing(true);
-    setTimeout(() => setIsPulsing(false), 500);
-  };
-
-
-  const variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.5,
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1,
-      scale: 1,
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.5,
-    }),
+    speak(currentAnimal.key);
   };
 
   return (
     <main className="relative w-screen h-screen bg-black overflow-hidden flex items-center justify-center">
       <div className="app-bg" />
 
-      {/* Language Switcher */}
-      <div className="absolute top-6 right-6 z-50 flex gap-2 md:gap-3">
-        <button 
-          onClick={() => setLang("id")}
-          className={`language-btn text-xs md:text-sm ${lang === "id" ? "active" : ""}`}
-        >
-          ID
-        </button>
-        <button 
-          onClick={() => setLang("en")}
-          className={`language-btn text-xs md:text-sm ${lang === "en" ? "active" : ""}`}
-        >
-          EN
-        </button>
+      {/* Language Switcher - No dimming */}
+      <div className="absolute top-6 right-6 z-50 flex gap-2">
+        {["id", "en"].map((l) => (
+          <button 
+            key={l}
+            onClick={() => !isBusy && setLang(l as Lang)}
+            className={`language-btn text-xs md:text-sm uppercase ${lang === l ? "active" : ""}`}
+          >
+            {l}
+          </button>
+        ))}
       </div>
 
-      {/* Navigation Areas */}
-      <div 
-        className="absolute left-0 top-0 w-[60px] md:w-[120px] h-full z-10 cursor-pointer flex items-center justify-start pl-4 md:pl-8 group" 
-        onClick={() => navigate(-1)}
-      >
-        <div className="text-white/20 group-hover:text-white/70 transition-colors text-2xl md:text-4xl">&larr;</div>
+      {/* Navigation - No dimming, just functional lock */}
+      <div className={`absolute inset-y-0 left-0 w-24 z-10 flex items-center justify-center ${isBusy ? "pointer-events-none" : "cursor-pointer"}`} onClick={() => navigate(-1)}>
+        <div className="text-white/20 text-3xl">&larr;</div>
       </div>
-      <div 
-        className="absolute right-0 top-0 w-[60px] md:w-[120px] h-full z-10 cursor-pointer flex items-center justify-end pr-4 md:pr-8 group" 
-        onClick={() => navigate(1)}
-      >
-        <div className="text-white/20 group-hover:text-white/70 transition-colors text-2xl md:text-4xl">&rarr;</div>
+      <div className={`absolute inset-y-0 right-0 w-24 z-10 flex items-center justify-center ${isBusy ? "pointer-events-none" : "cursor-pointer"}`} onClick={() => navigate(1)}>
+        <div className="text-white/20 text-3xl">&rarr;</div>
       </div>
 
-      {/* Content */}
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentAnimal.id}
           custom={direction}
-          variants={variants}
+          variants={{
+            enter: (d: number) => ({ x: d > 0 ? 1000 : -1000, opacity: 0 }),
+            center: { x: 0, opacity: 1 },
+            exit: (d: number) => ({ x: d < 0 ? 1000 : -1000, opacity: 0 }),
+          }}
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
-          }}
-          drag="x"
+          transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+          drag={isBusy ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={(_, { offset, velocity }) => {
-            if (offset.x < -50) navigate(1);
-            else if (offset.x > 50) navigate(-1);
+          onDragEnd={(_, { offset }) => {
+            if (!isBusy) {
+              if (offset.x < -50) navigate(1);
+              else if (offset.x > 50) navigate(-1);
+            }
           }}
           className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
-          style={{ padding: "5vh 5vw", willChange: "transform, opacity" }}
           onClick={handleInteraction}
         >
-          {/* Image Container - Maximized for 85-95% screen coverage */}
           <div className="relative w-[90vw] h-[80vh] flex items-center justify-center">
             <motion.img
               src={currentAnimal.image}
               alt={currentAnimal.key}
-              className="max-w-full max-h-full object-contain will-change-transform"
-              initial={{ rotate: -5 }}
-              animate={{ 
-                rotate: 0,
-                scale: isPulsing ? 1.05 : 1,
-              }}
-              transition={{ 
-                scale: { type: "spring", stiffness: 400, damping: 10 },
-                rotate: { duration: 0.5 }
-              }}
+              className="max-w-full max-h-full object-contain"
+              animate={{ scale: isPulsing ? 1.1 : 1 }}
             />
           </div>
           
-          {/* Text Area - Absolute overlay to keep image space clear */}
-          <div className="absolute bottom-[8vh] flex flex-col items-center justify-start max-w-full pointer-events-none">
-            <motion.h1 
-              className="text-lg sm:text-2xl md:text-3xl font-black text-white/80 tracking-tighter uppercase italic leading-none break-words px-4"
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
+          <div className="absolute bottom-[8vh] pointer-events-none">
+            <h1 className="text-2xl md:text-4xl font-black text-white/80 uppercase italic">
               {t[currentAnimal.key as keyof typeof t]}
-            </motion.h1>
+            </h1>
           </div>
         </motion.div>
       </AnimatePresence>
-
     </main>
   );
 }

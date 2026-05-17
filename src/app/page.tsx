@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSLATIONS, ANIMALS } from "./data";
+import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
 
 type Lang = "id" | "en";
 
@@ -17,40 +17,40 @@ export default function AnimalExplorer() {
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
 
-  // Robust Speech Synthesis with Warm Voice Selection
+  // Robust Audio MP3 Narration
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const triggerNarration = useCallback((animalKey: string) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (typeof window === "undefined") return;
 
     setIsBusy(true);
-    window.speechSynthesis.cancel();
+    
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
 
     const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
-    const utterance = new SpeechSynthesisUtterance(text);
+    const fileName = text.toLowerCase().replace(/ /g, "_") + ".mp3";
+    const audioUrl = `${BASE_PATH}/voices/${lang}/${fileName}`;
     
-    // Find best "Warm/Female/Google" voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-      v.lang.startsWith(lang) && 
-      (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Soft"))
-    ) || voices.find(v => v.lang.startsWith(lang));
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
 
-    if (preferredVoice) utterance.voice = preferredVoice;
-    
-    utterance.rate = 0.75; // Slower for toddler phonetic learning
-    utterance.pitch = 1.05; // Slightly warmer
-    
-    utterance.onend = () => {
+    audio.onended = () => {
       setIsBusy(false);
       setIsPulsing(false);
     };
 
-    // Safety timeout in case onend fails
-    setTimeout(() => {
+    audio.onerror = () => {
       setIsBusy(false);
       setIsPulsing(false);
-    }, 1200);
+    };
 
-    window.speechSynthesis.speak(utterance);
+    audio.play().catch(() => {
+      setIsBusy(false);
+      setIsPulsing(false);
+    });
   }, [lang]);
 
   const navigate = useCallback((newDir: number) => {
@@ -107,12 +107,7 @@ export default function AnimalExplorer() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [hasStarted, isBusy, navigate, handleInteraction]);
 
-  // Pre-warm engine
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.getVoices();
-    }
-  }, []);
+  // Pre-warm engine is removed since we use mp3s now
 
   return (
     <main 

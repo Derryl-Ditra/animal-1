@@ -12,7 +12,6 @@ export default function AnimalExplorer() {
   const [lang, setLang] = useState<Lang>("id");
   const [isBusy, setIsBusy] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   
   const currentAnimal = ANIMALS[currentIndex];
   const t = TRANSLATIONS[lang];
@@ -32,7 +31,7 @@ export default function AnimalExplorer() {
 
     const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
     const fileName = text.toLowerCase().replace(/ /g, "_") + ".mp3";
-    const audioUrl = `${BASE_PATH}/voices/${lang}/${fileName}`;
+    const audioUrl = `https://raw.githubusercontent.com/Derryl-Ditra/animal-1/main/public/voices/${lang}/${fileName}`;
     
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
@@ -54,7 +53,7 @@ export default function AnimalExplorer() {
   }, [lang]);
 
   const navigate = useCallback((newDir: number) => {
-    if (isBusy || !hasStarted) return;
+    if (isBusy) return;
     
     const whoosh = new Audio("https://www.soundjay.com/misc/sounds/whoosh-01.mp3");
     whoosh.volume = 0.1;
@@ -62,33 +61,23 @@ export default function AnimalExplorer() {
 
     setDirection(newDir);
     setCurrentIndex((prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length);
-  }, [isBusy, hasStarted]);
+  }, [isBusy]);
 
   const handleInteraction = useCallback(() => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      return;
-    }
     if (!isBusy) {
       setIsPulsing(true);
       triggerNarration(currentAnimal.key);
     }
-  }, [hasStarted, isBusy, currentAnimal.key, triggerNarration]);
+  }, [isBusy, currentAnimal.key, triggerNarration]);
 
   // Handle first sound trigger after start
   useEffect(() => {
-    if (hasStarted) {
-      triggerNarration(currentAnimal.key);
-    }
-  }, [hasStarted, currentIndex, lang, triggerNarration, currentAnimal.key]);
+    triggerNarration(currentAnimal.key);
+  }, [currentIndex, lang, triggerNarration, currentAnimal.key]);
 
   // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!hasStarted) {
-        if (e.key === "Enter" || e.key === " ") setHasStarted(true);
-        return;
-      }
       if (isBusy) return;
       
       switch (e.key) {
@@ -105,7 +94,7 @@ export default function AnimalExplorer() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasStarted, isBusy, navigate, handleInteraction]);
+  }, [isBusy, navigate, handleInteraction]);
 
   // Pre-warm engine is removed since we use mp3s now
 
@@ -116,27 +105,6 @@ export default function AnimalExplorer() {
       onClick={handleInteraction}
     >
       
-      {/* Start Overlay (Audio Unlock) */}
-      <AnimatePresence>
-        {!hasStarted && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center cursor-pointer"
-          >
-            <motion.div 
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="w-24 h-24 rounded-full border-2 border-white/20 flex items-center justify-center"
-            >
-              <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white/60 border-b-[15px] border-b-transparent ml-2" />
-            </motion.div>
-            <p className="mt-6 text-white/40 text-[10px] tracking-[0.3em] uppercase">Tap to Start</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Language Toggle */}
       <div className="absolute top-4 right-4 z-50 flex gap-2">
         {(["id", "en"] as Lang[]).map((l) => (
@@ -155,13 +123,13 @@ export default function AnimalExplorer() {
 
       {/* Navigation Arrows */}
       <button 
-        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy || !hasStarted ? "pointer-events-none" : "cursor-pointer"}`}
+        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => { e.stopPropagation(); navigate(-1); }}
       >
         &larr;
       </button>
       <button 
-        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy || !hasStarted ? "pointer-events-none" : "cursor-pointer"}`}
+        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => { e.stopPropagation(); navigate(1); }}
       >
         &rarr;
@@ -180,7 +148,7 @@ export default function AnimalExplorer() {
           animate="center"
           exit="exit"
           transition={{ x: { type: "spring", stiffness: 300, damping: 35 }, opacity: { duration: 0.2 } }}
-          drag={isBusy || !hasStarted ? false : "x"}
+          drag={isBusy ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(_, { offset }) => {
             if (!isBusy) {

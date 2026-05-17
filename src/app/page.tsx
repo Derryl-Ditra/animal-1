@@ -14,6 +14,9 @@ export default function AnimalExplorer() {
   const [isPulsing, setIsPulsing] = useState(false);
   
   const currentAnimal = ANIMALS[currentIndex];
+  const nextAnimal = ANIMALS[(currentIndex + 1) % ANIMALS.length];
+  const prevAnimal = ANIMALS[(currentIndex - 1 + ANIMALS.length) % ANIMALS.length];
+  
   const t = TRANSLATIONS[lang];
 
   // Robust Audio MP3 Narration
@@ -31,7 +34,7 @@ export default function AnimalExplorer() {
 
     const text = TRANSLATIONS[lang][animalKey as keyof typeof TRANSLATIONS['id']];
     const fileName = text.toLowerCase().replace(/ /g, "_") + ".mp3";
-    const audioUrl = `https://raw.githubusercontent.com/Derryl-Ditra/animal-1/main/public/voices/${lang}/${fileName}`;
+    const audioUrl = `https://cdn.jsdelivr.net/gh/Derryl-Ditra/animal-1@main/public/voices/${lang}/${fileName}`;
     
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
@@ -175,6 +178,10 @@ export default function AnimalExplorer() {
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Hidden preloads for next/prev images to ensure instantaneous swiping */}
+      <img src={nextAnimal.image} className="hidden" aria-hidden="true" alt="" />
+      <img src={prevAnimal.image} className="hidden" aria-hidden="true" alt="" />
     </main>
   );
 }

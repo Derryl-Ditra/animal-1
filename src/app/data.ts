@@ -55,12 +55,17 @@ export const TRANSLATIONS = {
   },
 };
 
-export const BASE_PATH = process.env.NODE_ENV === 'production' ? '/animal-1' : '';
+export const BASE_PATH =
+  process.env.NODE_ENV === "production" ? "/animal-1" : "";
 
 export const ANIMALS = [
   { id: "lion", key: "Lion", image: `${BASE_PATH}/animals/lion.png` },
   { id: "tiger", key: "Tiger", image: `${BASE_PATH}/animals/tiger.png` },
-  { id: "elephant", key: "Elephant", image: `${BASE_PATH}/animals/elephant.png` },
+  {
+    id: "elephant",
+    key: "Elephant",
+    image: `${BASE_PATH}/animals/elephant.png`,
+  },
   { id: "giraffe", key: "Giraffe", image: `${BASE_PATH}/animals/giraffe.png` },
   { id: "zebra", key: "Zebra", image: `${BASE_PATH}/animals/zebra.png` },
   { id: "panda", key: "Panda", image: `${BASE_PATH}/animals/panda.png` },
@@ -70,7 +75,11 @@ export const ANIMALS = [
   { id: "duck", key: "Duck", image: `${BASE_PATH}/animals/duck.png` },
   { id: "cat", key: "Cat", image: `${BASE_PATH}/animals/cat.png` },
   { id: "dog", key: "Dog", image: `${BASE_PATH}/animals/dog.png` },
-  { id: "squirrel", key: "Squirrel", image: `${BASE_PATH}/animals/squirrel.png` },
+  {
+    id: "squirrel",
+    key: "Squirrel",
+    image: `${BASE_PATH}/animals/squirrel.png`,
+  },
   { id: "horse", key: "Horse", image: `${BASE_PATH}/animals/horse.png` },
   { id: "cow", key: "Cow", image: `${BASE_PATH}/animals/cow.png` },
   { id: "sheep", key: "Sheep", image: `${BASE_PATH}/animals/sheep.png` },
@@ -78,7 +87,11 @@ export const ANIMALS = [
   { id: "fish", key: "Fish", image: `${BASE_PATH}/animals/fish.png` },
   { id: "sparrow", key: "Sparrow", image: `${BASE_PATH}/animals/sparrow.png` },
   { id: "owl", key: "Owl", image: `${BASE_PATH}/animals/owl.png` },
-  { id: "butterfly", key: "Butterfly", image: `${BASE_PATH}/animals/butterfly.png` },
+  {
+    id: "butterfly",
+    key: "Butterfly",
+    image: `${BASE_PATH}/animals/butterfly.png`,
+  },
   { id: "bee", key: "Bee", image: `${BASE_PATH}/animals/bee.png` },
   { id: "fox", key: "Fox", image: `${BASE_PATH}/animals/fox.png` },
   { id: "deer", key: "Deer", image: `${BASE_PATH}/animals/deer.png` },

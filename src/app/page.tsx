@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSLATIONS, ANIMALS } from "./data";
+import { TRANSLATIONS, ANIMALS, BASE_PATH } from "./data";
 
 type Lang = "id" | "en";
 
@@ -38,7 +38,7 @@ export default function AnimalExplorer() {
       const text =
         TRANSLATIONS[lang][animalKey as keyof (typeof TRANSLATIONS)["id"]];
       const fileName = text.toLowerCase().replace(/ /g, "_") + ".mp3";
-      const audioUrl = `https://cdn.jsdelivr.net/gh/Derryl-Ditra/animal-1@main/public/voices/${lang}/${fileName}`;
+      const audioUrl = `${BASE_PATH}/voices/${lang}/${fileName}`;
 
       const audio = new Audio(audioUrl);
       audioRef.current = audio;

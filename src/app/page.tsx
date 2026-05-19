@@ -61,30 +61,17 @@ export default function AnimalExplorer() {
     [lang],
   );
 
-  const navigate = useCallback(
-    (newDir: number) => {
-      if (isBusy) return;
-
-      const whoosh = new Audio(
-        "https://www.soundjay.com/misc/sounds/whoosh-01.mp3",
-      );
-      whoosh.volume = 0.1;
-      whoosh.play().catch(() => {});
-
-      setDirection(newDir);
-      setCurrentIndex(
-        (prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length,
-      );
-    },
-    [isBusy],
-  );
+  const navigate = useCallback((newDir: number) => {
+    setDirection(newDir);
+    setCurrentIndex(
+      (prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length,
+    );
+  }, []);
 
   const handleInteraction = useCallback(() => {
-    if (!isBusy) {
-      setIsPulsing(true);
-      triggerNarration(currentAnimal.key);
-    }
-  }, [isBusy, currentAnimal.key, triggerNarration]);
+    setIsPulsing(true);
+    triggerNarration(currentAnimal.key);
+  }, [currentAnimal.key, triggerNarration]);
 
   // Handle first sound trigger after start
   useEffect(() => {
@@ -95,8 +82,6 @@ export default function AnimalExplorer() {
   // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isBusy) return;
-
       switch (e.key) {
         case "ArrowLeft":
           navigate(-1);
@@ -119,7 +104,7 @@ export default function AnimalExplorer() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isBusy, navigate, handleInteraction]);
+  }, [navigate, handleInteraction]);
 
   // Pre-warm engine is removed since we use mp3s now
 
@@ -147,7 +132,7 @@ export default function AnimalExplorer() {
 
       {/* Navigation Arrows */}
       <button
-        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        className="absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
           navigate(-1);
@@ -156,7 +141,7 @@ export default function AnimalExplorer() {
         &larr;
       </button>
       <button
-        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+        className="absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
           navigate(1);
@@ -181,13 +166,11 @@ export default function AnimalExplorer() {
             x: { type: "spring", stiffness: 300, damping: 35 },
             opacity: { duration: 0.2 },
           }}
-          drag={isBusy ? false : "x"}
+          drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(_, { offset }) => {
-            if (!isBusy) {
-              if (offset.x < -60) navigate(1);
-              else if (offset.x > 60) navigate(-1);
-            }
+            if (offset.x < -60) navigate(1);
+            else if (offset.x > 60) navigate(-1);
           }}
           className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
         >

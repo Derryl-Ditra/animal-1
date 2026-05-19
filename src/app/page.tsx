@@ -23,12 +23,21 @@ export default function AnimalExplorer() {
 
   // Robust Audio MP3 Narration
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioEndedRef = useRef(false);
+  const timerEndedRef = useRef(false);
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerNarration = useCallback(
     (animalKey: string) => {
       if (typeof window === "undefined") return;
 
       setIsBusy(true);
+      audioEndedRef.current = false;
+      timerEndedRef.current = false;
+
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+      }
 
       if (audioRef.current) {
         audioRef.current.pause();
@@ -43,17 +52,36 @@ export default function AnimalExplorer() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
+      const checkAndRelease = () => {
+        if (audioEndedRef.current && timerEndedRef.current) {
+          setIsBusy(false);
+          setIsPulsing(false);
+        }
+      };
+
+      // Freeze all navigation for at least 1.5 seconds to avoid toddler tap-spamming
+      timeoutIdRef.current = setTimeout(() => {
+        timerEndedRef.current = true;
+        checkAndRelease();
+      }, 1500);
+
       audio.onended = () => {
-        setIsBusy(false);
-        setIsPulsing(false);
+        audioEndedRef.current = true;
+        checkAndRelease();
       };
 
       audio.onerror = () => {
+        // Release immediately on error to prevent softlocks
+        audioEndedRef.current = true;
+        timerEndedRef.current = true;
         setIsBusy(false);
         setIsPulsing(false);
       };
 
       audio.play().catch(() => {
+        // Release immediately on error to prevent softlocks
+        audioEndedRef.current = true;
+        timerEndedRef.current = true;
         setIsBusy(false);
         setIsPulsing(false);
       });
@@ -61,17 +89,31 @@ export default function AnimalExplorer() {
     [lang],
   );
 
-  const navigate = useCallback((newDir: number) => {
-    setDirection(newDir);
-    setCurrentIndex(
-      (prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length,
-    );
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+      }
+    };
   }, []);
 
+  const navigate = useCallback(
+    (newDir: number) => {
+      if (isBusy) return;
+      setDirection(newDir);
+      setCurrentIndex(
+        (prev) => (prev + newDir + ANIMALS.length) % ANIMALS.length,
+      );
+    },
+    [isBusy],
+  );
+
   const handleInteraction = useCallback(() => {
+    if (isBusy) return;
     setIsPulsing(true);
     triggerNarration(currentAnimal.key);
-  }, [currentAnimal.key, triggerNarration]);
+  }, [isBusy, currentAnimal.key, triggerNarration]);
 
   // Handle first sound trigger after start
   useEffect(() => {
@@ -82,6 +124,8 @@ export default function AnimalExplorer() {
   // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isBusy) return;
+
       switch (e.key) {
         case "ArrowLeft":
           navigate(-1);
@@ -104,7 +148,7 @@ export default function AnimalExplorer() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, handleInteraction]);
+  }, [isBusy, navigate, handleInteraction]);
 
   // Pre-warm engine is removed since we use mp3s now
 
@@ -132,7 +176,7 @@ export default function AnimalExplorer() {
 
       {/* Navigation Arrows */}
       <button
-        className="absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 cursor-pointer"
+        className={`absolute left-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => {
           e.stopPropagation();
           navigate(-1);
@@ -141,7 +185,7 @@ export default function AnimalExplorer() {
         &larr;
       </button>
       <button
-        className="absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 cursor-pointer"
+        className={`absolute right-0 inset-y-0 w-16 z-10 flex items-center justify-center text-white/5 text-xl transition-colors hover:text-white/20 ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
         onClick={(e) => {
           e.stopPropagation();
           navigate(1);
@@ -166,11 +210,13 @@ export default function AnimalExplorer() {
             x: { type: "spring", stiffness: 300, damping: 35 },
             opacity: { duration: 0.2 },
           }}
-          drag="x"
+          drag={isBusy ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={(_, { offset }) => {
-            if (offset.x < -60) navigate(1);
-            else if (offset.x > 60) navigate(-1);
+            if (!isBusy) {
+              if (offset.x < -60) navigate(1);
+              else if (offset.x > 60) navigate(-1);
+            }
           }}
           className="absolute inset-0 flex flex-col items-center justify-center text-center select-none"
         >

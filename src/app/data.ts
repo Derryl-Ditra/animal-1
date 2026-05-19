@@ -34,6 +34,17 @@ export const TRANSLATIONS = {
     Tapir: "Tapir",
     Komodo: "Komodo",
     Anoa: "Anoa",
+    Bear: "Beruang",
+    PolarBear: "Beruang Kutub",
+    Chicken: "Ayam",
+    Rooster: "Ayam Jago",
+    Capybara: "Kapibara",
+    Meerkat: "Meerkat",
+    Flamingo: "Flamingo",
+    Pelican: "Burung Pelikan",
+    Eagle: "Burung Elang",
+    Lovebird: "Burung Cinta",
+    ChubbyCat: "Kucing Gendut",
   },
   en: {
     Lion: "Lion",
@@ -68,6 +79,17 @@ export const TRANSLATIONS = {
     Tapir: "Tapir",
     Komodo: "Komodo Dragon",
     Anoa: "Anoa",
+    Bear: "Bear",
+    PolarBear: "Polar Bear",
+    Chicken: "Chicken",
+    Rooster: "Rooster",
+    Capybara: "Capybara",
+    Meerkat: "Meerkat",
+    Flamingo: "Flamingo",
+    Pelican: "Pelican",
+    Eagle: "Eagle",
+    Lovebird: "Lovebird",
+    ChubbyCat: "Chubby Cat",
   },
 };
 
@@ -127,5 +149,51 @@ export const ANIMALS = [
   { id: "tapir", key: "Tapir", image: `${BASE_PATH}/animals/tapir.webp` },
   { id: "komodo", key: "Komodo", image: `${BASE_PATH}/animals/komodo.webp` },
   { id: "anoa", key: "Anoa", image: `${BASE_PATH}/animals/anoa.webp` },
+  { id: "bear", key: "Bear", image: `${BASE_PATH}/animals/bear.webp` },
+  {
+    id: "polar_bear",
+    key: "PolarBear",
+    image: `${BASE_PATH}/animals/polar_bear.webp`,
+  },
+  {
+    id: "chicken",
+    key: "Chicken",
+    image: `${BASE_PATH}/animals/chicken.webp`,
+  },
+  {
+    id: "rooster",
+    key: "Rooster",
+    image: `${BASE_PATH}/animals/rooster.webp`,
+  },
+  {
+    id: "capybara",
+    key: "Capybara",
+    image: `${BASE_PATH}/animals/capybara.webp`,
+  },
+  {
+    id: "meerkat",
+    key: "Meerkat",
+    image: `${BASE_PATH}/animals/meerkat.webp`,
+  },
+  {
+    id: "flamingo",
+    key: "Flamingo",
+    image: `${BASE_PATH}/animals/flamingo.webp`,
+  },
+  {
+    id: "pelican",
+    key: "Pelican",
+    image: `${BASE_PATH}/animals/pelican.webp`,
+  },
+  { id: "eagle", key: "Eagle", image: `${BASE_PATH}/animals/eagle.webp` },
+  {
+    id: "lovebird",
+    key: "Lovebird",
+    image: `${BASE_PATH}/animals/lovebird.webp`,
+  },
+  {
+    id: "chubby_cat",
+    key: "ChubbyCat",
+    image: `${BASE_PATH}/animals/chubby_cat.webp`,
+  },
 ];
-
